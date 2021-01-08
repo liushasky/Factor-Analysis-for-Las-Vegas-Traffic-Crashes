@@ -1,0 +1,176 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2511
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fmodern\fcharset0 Courier;\f1\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red255\green255\blue255;\red34\green45\blue53;
+}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c100000\c100000\c100000;\cssrgb\c17748\c23253\c27131;
+}
+\margl1440\margr1440\vieww23020\viewh17280\viewkind0
+\deftab720
+\pard\pardeftab720\sl280\partightenfactor0
+
+\f0\fs28 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 // Load Dataset to look at the first 5 lines\
+\
+LOAD CSV WITH HEADERS FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+RETURN line\
+LIMIT 5\
+\
+// Create 7 Nodes: Crash, FirstVehicle, FirstDriver, \outl0\strokewidth0 SecondVehicle, SecondDriver, Environment,     \outl0\strokewidth0 Agency.\
+\
+	// Create Uniqueness  7 constraints.\
+CREATE CONSTRAINT ON (c:Crash) ASSERT c.id IS UNIQUE;\
+\
+CREATE CONSTRAINT ON (f:FirstVehicle) ASSERT f.name IS UNIQUE;\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \outl0\strokewidth0 CREATE CONSTRAINT ON (f:FirstDriver) ASSERT f.age IS UNIQUE;\
+\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 CREATE CONSTRAINT ON (s:SecondVehicle) ASSERT s.name IS UNIQUE;\
+CREATE CONSTRAINT ON (s:SecondDriver) ASSERT s.age IS UNIQUE;\
+
+\f1 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\pardeftab720\sl280\partightenfactor0
+
+\f0 \cf2 \expnd0\expndtw0\kerning0
+CREATE CONSTRAINT ON (e:Environment) ASSERT e.distance IS UNIQUE;\outl0\strokewidth0 \strokec2 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 CREATE CONSTRAINT ON (a:Agency) ASSERT a.name IS UNIQUE;\
+\
+	// Load.\
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line, SPLIT(line.CrashDate, '/') AS date\
+\
+// Create Node Crash and its properties\
+CREATE (crash:Crash \{id: ToInteger(line.FileID) \})\
+SET crash.year = ToInteger(date[2]),\
+    crash.month = ToInteger(date[0]),
+\fs32 \
+
+\fs28     crash.day = ToInteger(date[1]),\
+    \cf2 \outl0\strokewidth0 crash.CrashType = line.CrashType,\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf2     crash.Severity = line.Severity,\
+    crash.PrimaryStreet = line.PrimaryStreet,\
+    crash.County=line.County,\
+    crash.NumberOfInjured=ToInteger(line.NumberOfInjured),\
+    crash.NumberOfFatalities= ToInteger(line.NumberOfFatalities)\cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 MERGE (firstvehicle:FirstVehicle \{ name: ToUpper(line.FirstVehicleType) \})\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \outl0\strokewidth0 MERGE (secondvehicle:SecondVehicle \{ name: ToUpper(line.SecondVehicleType) \})\
+MERGE (firstdriver:FirstDriver \{ age: line.FirstDriverAge \})\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 MERGE (seconddriver:SecondDriver \{ age: line.SecondDriverAge \})\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 MERGE (environment:Environment \{ name: ToInteger(line.Distance) \})\outl0\strokewidth0 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 MERGE (agency:Agency \{ name: \outl0\strokewidth0 ToUpper\outl0\strokewidth0 (line.AgencyName) \})\
+\
+// Create 6 relationships with node Crash\
+CREATE (crash)-[:OCCURS_WITH]->(\outl0\strokewidth0 firstvehicle\outl0\strokewidth0 )\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \outl0\strokewidth0 CREATE (crash)-[:OCCURS_WITH]->(secondvehicle)\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 CREATE (crash)-[:IS_CAUSED_BY]->(firstdriver)\
+CREATE (crash)-[:IS_CAUSED_BY]->(seconddriver)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf2 CREATE (crash)-[:IS_UNDER]->(environment)\outl0\strokewidth0 \strokec2 \
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 CREATE (crash)-[:IS_REPORTED_TO]->(agency)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1 \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+\pard\pardeftab720\sl280\partightenfactor0
+
+\f0 \cf2 \expnd0\expndtw0\kerning0
+	\
+// Create properties for firstvehicle, secondvehicle, firstdriver, seconddriver, and environment.\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 // Load \
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line\
+\pard\pardeftab720\sl280\partightenfactor0
+
+\f1 \cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0 \cf0 MATCH (firstvehicle:FirstVehicle)\
+SET firstvehicle.FirstVehicleDirection = line.FirstVehicleDirection,\
+    firstvehicle.FirstVehicleLane = ToInteger(line.FirstVehicleLane),\
+    firstvehicle.FirstVehicleAction = line.FirstVehicleAction\
+\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+// Load \cf0 \kerning1\expnd0\expndtw0 \
+\cf2 \expnd0\expndtw0\kerning0
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line\
+\cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 MATCH (secondvehicle:SecondVehicle)\
+SET secondvehicle.SecondVehicleDirection = line.SecondVehicleDirection,\
+    secondvehicle.SecondVehicleLane = ToInteger(line.SecondVehicleLane),\
+    secondvehicle.SecondVehicleAction = line.SecondVehicleAction\
+\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+// Load \cf0 \kerning1\expnd0\expndtw0 \
+\cf2 \expnd0\expndtw0\kerning0
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 \kerning1\expnd0\expndtw0 MATCH (firstdriver:FirstDriver)\
+SET firstdriver.FirstDriverCondition = line.FirstDriverCondition\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 // Load \
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 \kerning1\expnd0\expndtw0 MATCH (seconddriver:SecondDriver)\
+SET seconddriver.SecondDriverCondition = line.SecondDriverCondition\
+\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+// Load \cf0 \kerning1\expnd0\expndtw0 \
+\cf2 \expnd0\expndtw0\kerning0
+:auto USING PERIODIC COMMIT\
+LOAD CSV WITH HEADERS \
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line\
+WITH line\
+\cf0 \kerning1\expnd0\expndtw0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardeftab720\pardirnatural\partightenfactor0
+\cf0 MATCH (environment:Environment)\
+SET environment.Weather = line.Weather,\
+    environment.RoadCondition = line.RoadCondition,\
+    environment.Lighting = line.Lighting,\
+    environment.\'94PedestrianInvolved?\'94 = line.\'94PedestrianInvolved?\'94\
+;\
+\pard\pardeftab720\sl280\partightenfactor0
+\cf2 \expnd0\expndtw0\kerning0
+\
+\pard\tx15920\pardeftab720\sl280\partightenfactor0
+\cf2 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1 \cf0 \kerning1\expnd0\expndtw0 \
+}

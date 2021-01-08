@@ -1,0 +1,110 @@
+// Load Dataset to look at the first 5 lines
+
+LOAD CSV WITH HEADERS FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+RETURN line
+LIMIT 5
+
+// Create 7 Nodes: Crash, FirstVehicle, FirstDriver, SecondVehicle, SecondDriver, Environment,     Agency.
+
+	// Create Uniqueness  7 constraints.
+CREATE CONSTRAINT ON (c:Crash) ASSERT c.id IS UNIQUE;
+
+CREATE CONSTRAINT ON (f:FirstVehicle) ASSERT f.name IS UNIQUE;
+CREATE CONSTRAINT ON (f:FirstDriver) ASSERT f.age IS UNIQUE;
+
+CREATE CONSTRAINT ON (s:SecondVehicle) ASSERT s.name IS UNIQUE;
+CREATE CONSTRAINT ON (s:SecondDriver) ASSERT s.age IS UNIQUE;
+
+CREATE CONSTRAINT ON (e:Environment) ASSERT e.distance IS UNIQUE;
+CREATE CONSTRAINT ON (a:Agency) ASSERT a.name IS UNIQUE;
+
+	// Load.
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line, SPLIT(line.CrashDate, '/') AS date
+
+// Create Node Crash and its properties
+CREATE (crash:Crash {id: ToInteger(line.FileID) })
+SET crash.year = ToInteger(date[2]),
+    crash.month = ToInteger(date[0]),
+    crash.day = ToInteger(date[1]),
+    crash.CrashType = line.CrashType,
+    crash.Severity = line.CrashSeverity,
+    crash.PrimaryStreet = line.PrimaryStreet,
+    crash.County=line.County,
+    crash.NumberOfInjured=ToInteger(line.NumberOfInjured),
+    crash.NumberOfFatalities= ToInteger(line.NumberOfFatalities)
+
+MERGE (firstvehicle:FirstVehicle { name: ToUpper(line.FirstVehicleType) })
+MERGE (secondvehicle:SecondVehicle { name: ToUpper(line.SecondVehicleType) })
+MERGE (firstdriver:FirstDriver { age: line.FirstDriverAge })
+MERGE (seconddriver:SecondDriver { age: line.SecondDriverAge })
+MERGE (environment:Environment { name: ToInteger(line.Distance) })
+MERGE (agency:Agency { name: ToUpper(line.AgencyName) })
+
+// Create 6 relationships with node Crash
+CREATE (crash)-[:OCCURS_WITH]->(firstvehicle)
+CREATE (crash)-[:OCCURS_WITH]->(secondvehicle)
+CREATE (crash)-[:IS_CAUSED_BY]->(firstdriver)
+CREATE (crash)-[:IS_CAUSED_BY]->(seconddriver)
+CREATE (crash)-[:IS_UNDER]->(environment)
+CREATE (crash)-[:IS_REPORTED_TO]->(agency)
+
+	
+// Create properties for firstvehicle, secondvehicle, firstdriver, seconddriver, and environment.
+// Load 
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line
+
+MATCH (firstvehicle:FirstVehicle)
+SET firstvehicle.FirstVehicleDirection = line.FirstVehicleDirection,
+    firstvehicle.FirstVehicleLane = ToInteger(line.FirstVehicleLane),
+    firstvehicle.FirstVehicleAction = line.FirstVehicleAction
+
+// Load 
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line
+
+MATCH (secondvehicle:SecondVehicle)
+SET secondvehicle.SecondVehicleDirection = line.SecondVehicleDirection,
+    secondvehicle.SecondVehicleLane = ToInteger(line.SecondVehicleLane),o\
+    secondvehicle.SecondVehicleAction = line.SecondVehicleAction
+
+// Load 
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line
+
+MATCH (firstdriver:FirstDriver)
+SET firstdriver.FirstDriverCondition = line.FirstDriverCondition
+
+// Load 
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line
+
+MATCH (seconddriver:SecondDriver)
+SET seconddriver.SecondDriverCondition = line.SecondDriverCondition
+
+// Load 
+:auto USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS 
+FROM "file:///Users/shaliu/Documents/SQL/Traffic_Crashes.csv" AS line
+WITH line
+
+MATCH (environment:Environment)
+SET environment.Weather = line.Weather,
+    environment.RoadCondition = line.RoadCondition,
+    environment.Lighting = line.Lighting,
+    environment.PedestrianInvolved = line.PedestrianInvolved
+;
+
+
+
